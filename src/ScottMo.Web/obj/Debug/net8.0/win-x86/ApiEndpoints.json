@@ -1,0 +1,22 @@
+[
+  {
+    "ContainingType": "ScottMo.Web.Controllers.Api.HelloController",
+    "Method": "Get",
+    "RelativePath": "api/Hello",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ScottMo.Web.Controllers.Api.HelloController",
+    "Method": "Secure",
+    "RelativePath": "api/Hello/secure",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  }
+]

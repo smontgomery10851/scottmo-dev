@@ -1,0 +1,22 @@
+@page
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<IdentityUser> SignInManager
+@inject UserManager<IdentityUser> UserManager
+@model IndexModel
+@{
+    ViewData["Title"] = "Home";
+}
+<h1>Welcome to ScottMo.dev</h1>
+<p>This is a minimal ASP.NET Core 8 app with Identity + Web API.</p>
+
+@if (SignInManager.IsSignedIn(User))
+{
+    <p>Hello, @User.Identity?.Name! Go to <a href="/api/hello/secure">secure API</a>.</p>
+    <form method="post" asp-page-handler="Logout">
+        <button type="submit">Logout</button>
+    </form>
+}
+else
+{
+    <p><a href="/Identity/Account/Login">Login</a> or <a href="/Identity/Account/Register">Register</a></p>
+}
