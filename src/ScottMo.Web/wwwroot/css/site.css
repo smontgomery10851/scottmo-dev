@@ -31,3 +31,27 @@ main.container {
     padding: 1rem;
     min-height: 70vh;
 }
+
+/* Tight, consistent navbar spacing */
+.navbar {
+    --bs-navbar-padding-y: .5rem;
+}
+/* reduce height */
+.navbar-brand {
+    margin-right: 1rem;
+    letter-spacing: .3px;
+}
+
+.navbar-nav .nav-link {
+    padding: .25rem .5rem;
+}
+/* tighter link padding */
+@media (min-width: 992px) {
+    .navbar-nav {
+        gap: .25rem;
+    }
+}
+
+main.container {
+    min-height: 60vh;
+}
