@@ -19,25 +19,13 @@
                     <li class="nav-item"><a class="nav-link" href="/api/hello">API</a></li>
                 </ul>
 
-                @* auth links live at the far right *@
                 @await Html.PartialAsync("_LoginPartial")
             </div>
         </div>
     </nav>
 </header>
 
-
 <body>
-<header>
-    <nav class="navbar">
-        <a class="navbar-brand" asp-page="/Index">ScottMo.dev</a>
-        <ul class="nav">
-            <li class="nav-item"><a class="nav-link" asp-page="/Index">Home</a></li>
-            <li class="nav-item"><a class="nav-link" href="/api/hello">API</a></li>
-        </ul>
-        @await Html.PartialAsync("_LoginPartial")
-    </nav>
-</header>
 
 <main class="container">
     @RenderBody()
