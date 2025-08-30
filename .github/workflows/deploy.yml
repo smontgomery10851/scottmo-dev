@@ -1,7 +1,7 @@
 name: deploy
 on:
   push:
-    branches: [ main ]
+    branches: [ "main" ]
 
 jobs:
   build-and-deploy:
@@ -14,7 +14,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: "8.0.x"
 
       - name: Restore
         run: dotnet restore src/ScottMo.Web/ScottMo.Web.csproj
@@ -48,18 +48,32 @@ jobs:
           $sha = "${{ github.sha }}".Substring(0,7)
           Set-Content -Path "publish/version.txt" -Value "deployed $((Get-Date).ToString('u')) / $sha"
 
-      - name: FTP Deploy (keep /httpdocs/Downloads intact)
+      - name: FTP Deploy (implicit FTPS on 990, smaller payload; keep /Downloads)
         uses: SamKirkland/FTP-Deploy-Action@v4.3.6
         with:
           server: ${{ secrets.GD_FTPS_SERVER }}
           username: ${{ secrets.GD_FTPS_USER }}
           password: ${{ secrets.GD_FTPS_PASSWORD }}
-          port: 21
-          protocol: ftps
-          local-dir: publish/
-          server-dir: httpdocs/
+          protocol: ftps-legacy         # implicit FTPS
+          port: 990                     # implicit FTPS control port
+          security: loose               # tolerate cert/hostname quirks
+          timeout: 120000               # ms; more patience for slow data sockets
+          local-dir: "publish/"
+          server-dir: "httpdocs/"       # note the trailing slash per docs
           exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
             Downloads/**
             **/Downloads/**
-          log-level: verbose
-          state-name: .ftp-deploy-sync-state.json
+            **/*.map
+            **/scss/**
+            **/src/**
+            **/LICENSE
+            **/LICENSE.*
+            **/README
+            **/README.md
+            **/package.json
+            **/bower.json
+          log-level: "verbose"
+          state-name: ".ftp-deploy-sync-state.json"
