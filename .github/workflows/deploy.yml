@@ -54,8 +54,8 @@ jobs:
           server: ${{ secrets.GD_FTPS_SERVER }}
           username: ${{ secrets.GD_FTPS_USER }}
           password: ${{ secrets.GD_FTPS_PASSWORD }}
-          protocol: ftps-legacy         # implicit FTPS
-          port: 990                     # implicit FTPS control port
+          protocol: ftps         # implicit FTPS
+          port: 21                     # implicit FTPS control port
           security: loose               # tolerate cert/hostname quirks
           timeout: 120000               # ms; more patience for slow data sockets
           local-dir: "publish/"
