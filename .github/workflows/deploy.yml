@@ -22,6 +22,27 @@ jobs:
       - name: Publish (self-contained for win-x86 IIS)
         run: dotnet publish src/ScottMo.Web/ScottMo.Web.csproj -c Release -o publish -r win-x86 --self-contained true /p:PublishReadyToRun=true
 
+      # Inject the connection string into publish/web.config so it exists only in the artifact, not in git
+      - name: Inject connection string into web.config
+        shell: pwsh
+        run: |
+          $web = "publish/web.config"
+          if (-not (Test-Path $web)) { throw "web.config not found at $web" }
+          [xml]$x = Get-Content $web
+          $sw = $x.configuration.'system.webServer'
+          if (-not $sw) { throw "system.webServer not found in web.config" }
+          $ancm = $sw.aspNetCore
+          if (-not $ancm) { $ancm = $x.CreateElement("aspNetCore"); $sw.AppendChild($ancm) | Out-Null }
+          $envs = $ancm.environmentVariables
+          if (-not $envs) { $envs = $x.CreateElement("environmentVariables"); $ancm.AppendChild($envs) | Out-Null }
+          # Remove existing entry if any
+          foreach ($n in @($envs.environmentVariable)) { if ($n.name -eq "Default__ConnectionString") { $envs.RemoveChild($n) | Out-Null } }
+          $e = $x.CreateElement("environmentVariable")
+          $e.SetAttribute("name","Default__ConnectionString")
+          $e.SetAttribute("value","${{ secrets.GD_DB_CONNSTR }}")
+          $envs.AppendChild($e) | Out-Null
+          $x.Save($web)
+
       - name: FTP Deploy (keep /httpdocs/Downloads intact)
         uses: SamKirkland/FTP-Deploy-Action@v4
         with:
@@ -32,6 +53,5 @@ jobs:
           local-dir: publish/
           server-dir: /httpdocs/
           exclude: |
-            # Never touch the server's ClickOnce folder
             Downloads/**
             **/Downloads/**
