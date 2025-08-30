@@ -1,6 +1,5 @@
-﻿/* Keep it light so we don't fight Bootstrap */
+﻿/* Minimal theme on top of Bootstrap */
 
-/* Base */
 html, body {
     height: 100%;
 }
@@ -10,21 +9,37 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
-/* Layout */
 main.container {
     min-height: 60vh;
 }
 
-/* Navbar polish (do NOT redefine .navbar display/spacing) */
-.navbar-brand {
-    letter-spacing: .2px;
+.navbar {
+    --bs-navbar-padding-y: .5rem;
 }
 
-.navbar-nav .nav-link {
-    padding: .5rem .75rem;
+.navbar-brand .brand-logo {
+    height: 28px;
+    width: auto;
+    display: inline-block;
 }
 
-/* Footer */
-footer {
-    color: #6c757d;
+/* Hero card */
+.card.hero {
+    border-radius: .75rem;
+}
+
+.blockquote {
+    font-style: italic;
+}
+
+    .blockquote p {
+        margin-bottom: .25rem;
+    }
+
+.hero-img {
+    max-width: 520px;
+    width: 100%;
+    height: auto;
+    display: block;
+    margin: 1rem auto 0;
 }

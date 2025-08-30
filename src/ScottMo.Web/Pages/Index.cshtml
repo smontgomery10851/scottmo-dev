@@ -6,10 +6,28 @@
 @{
     ViewData["Title"] = "Home";
 }
-<h1>Welcome to ScottMo.dev</h1>
-<p>This is a minimal ASP.NET Core 8 app with Identity + Web API.</p>
 
-@if (SignInManager.IsSignedIn(User))
+<div class="card hero">
+    <div class="card-body text-center py-5">
+        <blockquote class="blockquote mb-4">
+            <p class="lead fw-normal mb-1">
+                “Making the simple complicated is common place; making the complicated simple, awesomely simple, that’s creativity.”
+            </p>
+            <footer class="blockquote-footer mt-2">Charles Mingus</footer>
+        </blockquote>
+        
+        <!-- DotLottie animation using your hosted file -->
+        <dotlottie-player src="https://lottie.host/f71f7af1-0c56-41e3-b96f-16a4ccad4319/tFpXwdXldc.lottie"
+            background="transparent"
+            speed="1"
+            loop
+            autoplay
+            style="width:300px;height:300px;display:block;margin:1rem auto 0;">
+        </dotlottie-player>
+    </div>
+</div>
+
+@* @if (SignInManager.IsSignedIn(User))
 {
     <p>Hello, @User.Identity?.Name! Go to <a href="/api/hello/secure">secure API</a>.</p>
     <form method="post" asp-page-handler="Logout">
@@ -19,4 +37,4 @@
 else
 {
     <p><a href="/Identity/Account/Login">Login</a> or <a href="/Identity/Account/Register">Register</a></p>
-}
+} *@

@@ -4,53 +4,61 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>@ViewData["Title"] - ScottMo.dev</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>@ViewData["Title"] - ScottMo.Dev</title>
 
-    <!-- Local CSS (no CDN) -->
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+  <!-- Favicon(s) -->
+  <link rel="icon" type="image/x-icon" href="~/favicon.ico" />
+  <meta name="theme-color" content="#212529" />
+
+  <!-- Local CSS (no CDN) -->
+  <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" asp-append-version="true" />
+  <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+
+  <script type="module" src="https://unpkg.com/@@dotlottie/player-component@@2.7.12/dist/dotlottie-player.mjs"></script>
 </head>
 <body class="bg-light">
-    <header>
-        <nav class="navbar navbar-expand-lg navbar-light bg-light border-bottom">
-            <div class="container">
-                <a class="navbar-brand fw-semibold" asp-page="/Index">ScottMo.dev</a>
+  <header>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow-sm">
+      <div class="container">
+        <a class="navbar-brand d-flex align-items-center gap-2" asp-page="/Index">
+          <img src="~/images/smo-logo.png" alt="SMO" class="brand-logo" />
+          <span>ScottMo.Dev</span>
+        </a>
 
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#siteNav"
-                        aria-controls="siteNav" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#siteNav"
+                aria-controls="siteNav" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
 
-                <div id="siteNav" class="collapse navbar-collapse">
-                    <ul class="navbar-nav me-auto">
-                        <li class="nav-item"><a class="nav-link" asp-page="/Index">Home</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/api/hello">API</a></li>
-                    </ul>
+        <div id="siteNav" class="collapse navbar-collapse">
+          <ul class="navbar-nav me-auto">
+            <li class="nav-item"><a class="nav-link" asp-page="/Index">Home</a></li>
+            <li class="nav-item"><a class="nav-link" href="/api/hello">API</a></li>
+          </ul>
 
-                    @* auth links at far right *@
-                    @await Html.PartialAsync("_LoginPartial")
-                </div>
-            </div>
-        </nav>
-    </header>
+          @await Html.PartialAsync("_LoginPartial")
+        </div>
+      </div>
+    </nav>
+  </header>
 
-    <main class="container py-4">
-        @RenderBody()
-    </main>
+  <main class="container py-4">
+    @RenderBody()
+  </main>
 
-    <footer class="border-top py-3 mt-4">
-        <div class="container"><small>&copy; @DateTime.UtcNow.Year ScottMo.dev</small></div>
-    </footer>
+  <footer class="border-top py-3 mt-4">
+    <div class="container"><small>&copy; @DateTime.UtcNow.Year ScottMo.Dev</small></div>
+  </footer>
 
-    <!-- Local scripts (order matters) -->
-    <script src="~/lib/jquery/dist/jquery.min.js" asp-append-version="true"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js" asp-append-version="true"></script>
-    <script src="~/lib/jquery-validation/dist/jquery.validate.min.js" asp-append-version="true"></script>
-    <script src="~/lib/jquery-validation-unobtrusive/dist/jquery.validate.unobtrusive.min.js" asp-append-version="true"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
+  <!-- Local scripts (order matters) -->
+  <script src="~/lib/jquery/dist/jquery.min.js" asp-append-version="true"></script>
+  <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js" asp-append-version="true"></script>
+  <script src="~/lib/jquery-validation/dist/jquery.validate.min.js" asp-append-version="true"></script>
+  <script src="~/lib/jquery-validation-unobtrusive/dist/jquery.validate.unobtrusive.min.js" asp-append-version="true"></script>
+  <script src="~/js/site.js" asp-append-version="true"></script>
 
-    @await RenderSectionAsync("Scripts", required: false)
+  @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
