@@ -56,4 +56,10 @@ jobs:
           password: ${{ secrets.GD_FTPS_PASSWORD }}
           port: 21
           protocol: ftps
-          lo
+          local-dir: publish/
+          server-dir: httpdocs/
+          exclude: |
+            Downloads/**
+            **/Downloads/**
+          log-level: verbose
+          state-name: .ftp-deploy-sync-state.json
