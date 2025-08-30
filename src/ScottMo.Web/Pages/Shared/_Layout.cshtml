@@ -1,44 +1,56 @@
 ﻿@*
-  Minimal shared layout for all pages (site + Identity)
+  Shared layout for all pages (site + Identity)
 *@
 <!DOCTYPE html>
 <html lang="en">
-<header>
-    <nav class="navbar navbar-expand-lg navbar-light bg-light border-bottom">
-        <div class="container">
-            <a class="navbar-brand fw-semibold" asp-page="/Index">ScottMo.dev</a>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>@ViewData["Title"] - ScottMo.dev</title>
 
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#siteNav"
-                    aria-controls="siteNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
+    <!-- Local CSS (no CDN) -->
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="bg-light">
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-light bg-light border-bottom">
+            <div class="container">
+                <a class="navbar-brand fw-semibold" asp-page="/Index">ScottMo.dev</a>
 
-            <div id="siteNav" class="collapse navbar-collapse">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item"><a class="nav-link" asp-page="/Index">Home</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/api/hello">API</a></li>
-                </ul>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#siteNav"
+                        aria-controls="siteNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
 
-                @await Html.PartialAsync("_LoginPartial")
+                <div id="siteNav" class="collapse navbar-collapse">
+                    <ul class="navbar-nav me-auto">
+                        <li class="nav-item"><a class="nav-link" asp-page="/Index">Home</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/api/hello">API</a></li>
+                    </ul>
+
+                    @* auth links at far right *@
+                    @await Html.PartialAsync("_LoginPartial")
+                </div>
             </div>
-        </div>
-    </nav>
-</header>
+        </nav>
+    </header>
 
-<body>
+    <main class="container py-4">
+        @RenderBody()
+    </main>
 
-<main class="container">
-    @RenderBody()
-</main>
+    <footer class="border-top py-3 mt-4">
+        <div class="container"><small>&copy; @DateTime.UtcNow.Year ScottMo.dev</small></div>
+    </footer>
 
-<footer class="footer">
-    <small>&copy; @DateTime.UtcNow.Year ScottMo.dev</small>
-</footer>
+    <!-- Local scripts (order matters) -->
     <script src="~/lib/jquery/dist/jquery.min.js" asp-append-version="true"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js" asp-append-version="true"></script>
     <script src="~/lib/jquery-validation/dist/jquery.validate.min.js" asp-append-version="true"></script>
     <script src="~/lib/jquery-validation-unobtrusive/dist/jquery.validate.unobtrusive.min.js" asp-append-version="true"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
