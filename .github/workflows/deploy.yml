@@ -2,18 +2,23 @@ name: deploy
 on:
   push:
     branches: [ main ]
+
 jobs:
   build-and-deploy:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
+
       - name: Restore
         run: dotnet restore src/ScottMo.Web/ScottMo.Web.csproj
+
       - name: Publish (self-contained for win-x86 IIS)
         run: dotnet publish src/ScottMo.Web/ScottMo.Web.csproj -c Release -o publish -r win-x86 --self-contained true /p:PublishReadyToRun=true
+
       - name: FTP Deploy
         uses: SamKirkland/FTP-Deploy-Action@v4
         with:
@@ -23,3 +28,7 @@ jobs:
           local-dir: publish/
           server-dir: /httpdocs/
           protocol: ftps
+
+          # Do not upload or delete anything inside /httpdocs/Downloads on the server
+          exclude: |
+            **/Downloads/**
