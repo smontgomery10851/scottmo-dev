@@ -6,10 +6,13 @@ on:
 jobs:
   build-and-deploy:
     runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: actions/setup-dotnet@v4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
 
@@ -19,16 +22,16 @@ jobs:
       - name: Publish (self-contained for win-x86 IIS)
         run: dotnet publish src/ScottMo.Web/ScottMo.Web.csproj -c Release -o publish -r win-x86 --self-contained true /p:PublishReadyToRun=true
 
-      - name: FTP Deploy
+      - name: FTP Deploy (keep /httpdocs/Downloads intact)
         uses: SamKirkland/FTP-Deploy-Action@v4
         with:
           server: ${{ secrets.GD_FTPS_SERVER }}
           username: ${{ secrets.GD_FTPS_USER }}
           password: ${{ secrets.GD_FTPS_PASSWORD }}
+          protocol: ftps
           local-dir: publish/
           server-dir: /httpdocs/
-          protocol: ftps
-
-          # Do not upload or delete anything inside /httpdocs/Downloads on the server
           exclude: |
+            # Never touch the server's ClickOnce folder
+            Downloads/**
             **/Downloads/**
