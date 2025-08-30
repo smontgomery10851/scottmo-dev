@@ -59,7 +59,7 @@ jobs:
           security: loose               # tolerate cert/hostname quirks
           timeout: 120000               # ms; more patience for slow data sockets
           local-dir: "publish/"
-          server-dir: "httpdocs/"       # note the trailing slash per docs
+          server-dir: "./"       # note the trailing slash per docs
           exclude: |
             **/.git*
             **/.git*/**
