@@ -22,30 +22,57 @@ jobs:
       - name: Publish (self-contained for win-x64 IIS)
         run: dotnet publish src/ScottMo.Web/ScottMo.Web.csproj -c Release -o publish -r win-x64 --self-contained true /p:PublishReadyToRun=true
 
-      # Ensure the stdout log folder exists (ANCM won't create it)
-      - name: Create stdout log folder in artifact
+      - name: Ensure stdout log folder exists
         shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Path "publish/logs" -Force | Out-Null
+        run: New-Item -ItemType Directory -Path "publish/logs" -Force | Out-Null
 
-      # Inject the connection string into publish/web.config (keeps creds out of git)
-      - name: Inject connection string into web.config
+      # Enforce a correct aspNetCore config (out-of-process, exe path, logs, and conn string)
+      - name: Enforce web.config settings + inject connection string
         shell: pwsh
         run: |
           $web = "publish/web.config"
           if (-not (Test-Path $web)) { throw "web.config not found at $web" }
           [xml]$x = Get-Content $web
-          $sw = $x.configuration.'system.webServer'
-          if (-not $sw) { throw "system.webServer not found in web.config" }
-          $ancm = $sw.aspNetCore
-          if (-not $ancm) { $ancm = $x.CreateElement("aspNetCore"); $sw.AppendChild($ancm) | Out-Null }
-          $envs = $ancm.environmentVariables
-          if (-not $envs) { $envs = $x.CreateElement("environmentVariables"); $ancm.AppendChild($envs) | Out-Null }
-          foreach ($n in @($envs.environmentVariable)) { if ($n.name -eq "Default__ConnectionString") { $envs.RemoveChild($n) | Out-Null } }
-          $e = $x.CreateElement("environmentVariable")
-          $e.SetAttribute("name","Default__ConnectionString")
-          $e.SetAttribute("value","${{ secrets.GD_DB_CONNSTR }}")
+
+          # Ensure <system.webServer>
+          $conf = $x.configuration
+          $sw = $conf.'system.webServer'
+          if (-not $sw) { $sw = $x.CreateElement('system.webServer'); $conf.AppendChild($sw) | Out-Null }
+
+          # Ensure <handlers><add AspNetCoreModuleV2/></handlers>
+          $handlers = $sw.handlers
+          if (-not $handlers) { $handlers = $x.CreateElement('handlers'); $sw.AppendChild($handlers) | Out-Null }
+          $existing = $handlers.SelectSingleNode('add[@name="aspNetCore"]')
+          if (-not $existing) {
+            $add = $x.CreateElement('add')
+            $add.SetAttribute('name','aspNetCore')
+            $add.SetAttribute('path','*')
+            $add.SetAttribute('verb','*')
+            $add.SetAttribute('modules','AspNetCoreModuleV2')
+            $add.SetAttribute('resourceType','Unspecified')
+            $handlers.AppendChild($add) | Out-Null
+          }
+
+          # Ensure <aspNetCore .../> with correct attributes
+          $ancm = $sw.SelectSingleNode('aspNetCore')
+          if (-not $ancm) { $ancm = $x.CreateElement('aspNetCore'); $sw.AppendChild($ancm) | Out-Null }
+          $ancm.SetAttribute('processPath', '.\ScottMo.Web.exe')      # self-contained exe
+          $ancm.SetAttribute('arguments', '')
+          $ancm.SetAttribute('hostingModel', 'outofprocess')          # force OOP
+          $ancm.SetAttribute('stdoutLogEnabled', 'true')
+          $ancm.SetAttribute('stdoutLogFile', '.\logs\stdout')
+
+          # Ensure <environmentVariables><environmentVariable .../></environmentVariables>
+          $envs = $ancm.SelectSingleNode('environmentVariables')
+          if (-not $envs) { $envs = $x.CreateElement('environmentVariables'); $ancm.AppendChild($envs) | Out-Null }
+          foreach ($n in @($envs.SelectNodes('environmentVariable'))) {
+            if ($n.GetAttribute('name') -eq 'Default__ConnectionString') { $envs.RemoveChild($n) | Out-Null }
+          }
+          $e = $x.CreateElement('environmentVariable')
+          $e.SetAttribute('name','Default__ConnectionString')
+          $e.SetAttribute('value',"${{ secrets.GD_DB_CONNSTR }}")
           $envs.AppendChild($e) | Out-Null
+
           $x.Save($web)
 
       - name: Add deploy marker
