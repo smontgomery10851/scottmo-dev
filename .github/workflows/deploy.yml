@@ -63,4 +63,6 @@ jobs:
           exclude: |
             Downloads/**
             **/Downloads/**
-          dangerous-clean-s
+          dangerous-clean-slate: true
+          log-level: "verbose"
+          state-name: ".ftp-deploy-sync-state.json"
