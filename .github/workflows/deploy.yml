@@ -19,9 +19,10 @@ jobs:
       - name: Restore
         run: dotnet restore src/ScottMo.Web/ScottMo.Web.csproj
 
-      - name: Publish (self-contained for win-x86 IIS)
-        run: dotnet publish src/ScottMo.Web/ScottMo.Web.csproj -c Release -o publish -r win-x86 --self-contained true /p:PublishReadyToRun=true
+      - name: Publish (self-contained for win-x64 IIS)
+        run: dotnet publish src/ScottMo.Web/ScottMo.Web.csproj -c Release -o publish -r win-x64 --self-contained true /p:PublishReadyToRun=true
 
+      # Inject the connection string into publish/web.config (keeps creds out of git)
       - name: Inject connection string into web.config
         shell: pwsh
         run: |
@@ -53,15 +54,13 @@ jobs:
           server: ${{ secrets.GD_FTPS_SERVER }}
           username: ${{ secrets.GD_FTPS_USER }}
           password: ${{ secrets.GD_FTPS_PASSWORD }}
-          protocol: ftps-legacy       # implicit FTPS is stabler on many Plesk hosts
+          protocol: ftps-legacy
           port: 990
           security: loose
           timeout: 120000
           local-dir: "publish/"
-          server-dir: "/httpdocs/"    # <-- absolute path to the public web root
+          server-dir: "/httpdocs/"
           exclude: |
             Downloads/**
             **/Downloads/**
-          dangerous-clean-slate: true  # wipe old files in /httpdocs (but not Downloads)
-          log-level: "verbose"
-          state-name: ".ftp-deploy-sync-state.json"
+          dangerous-clean-s
