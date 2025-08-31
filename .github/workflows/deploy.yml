@@ -22,6 +22,12 @@ jobs:
       - name: Publish (self-contained for win-x64 IIS)
         run: dotnet publish src/ScottMo.Web/ScottMo.Web.csproj -c Release -o publish -r win-x64 --self-contained true /p:PublishReadyToRun=true
 
+      # Ensure the stdout log folder exists (ANCM won't create it)
+      - name: Create stdout log folder in artifact
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "publish/logs" -Force | Out-Null
+
       # Inject the connection string into publish/web.config (keeps creds out of git)
       - name: Inject connection string into web.config
         shell: pwsh
