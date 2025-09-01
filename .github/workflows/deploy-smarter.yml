@@ -1,0 +1,61 @@
+name: deploy-smarterasp
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-deploy:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      # Framework-dependent publish (smaller; uses host's .NET 8)
+      - name: Publish
+        run: dotnet publish src/ScottMo.Web/ScottMo.Web.csproj -c Release -o publish
+
+      # Ensure stdout log folder exists (ANCM won't create the folder)
+      - name: Create stdout log folder in artifact
+        shell: pwsh
+        run: New-Item -ItemType Directory -Path "publish/logs" -Force | Out-Null
+
+      # Inject DB connection string into web.config (keeps secrets out of git)
+      - name: Inject connection string into web.config
+        shell: pwsh
+        run: |
+          $web = "publish/web.config"
+          [xml]$x = Get-Content $web
+          $ancm = $x.configuration.'system.webServer'.aspNetCore
+          if (-not $ancm) { throw "aspNetCore element not found in web.config" }
+          $envs = $ancm.environmentVariables
+          if (-not $envs) { $envs = $x.CreateElement("environmentVariables"); $ancm.AppendChild($envs) | Out-Null }
+          foreach ($n in @($envs.environmentVariable)) { if ($n.name -eq "Default__ConnectionString") { $envs.RemoveChild($n) | Out-Null } }
+          $e = $x.CreateElement("environmentVariable")
+          $e.SetAttribute("name","Default__ConnectionString")
+          $e.SetAttribute("value","${{ secrets.SASP_DB_CONNSTR }}")
+          $envs.AppendChild($e) | Out-Null
+          $x.Save($web)
+
+      - name: Add deploy marker
+        shell: pwsh
+        run: |
+          $sha = "${{ github.sha }}".Substring(0,7)
+          Set-Content -Path "publish/version.txt" -Value "deployed $((Get-Date).ToString('u')) / $sha"
+
+      - name: FTP Deploy to SmarterASP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.6
+        with:
+          server: ${{ secrets.SASP_FTPS_SERVER }}
+          username: ${{ secrets.SASP_FTPS_USER }}
+          password: ${{ secrets.SASP_FTPS_PASSWORD }}
+          protocol: ftps           # explicit FTPS on 21; if issues, change to ftps-legacy + port 990
+          port: 21
+          local-dir: "publish/"
+          server-dir: ${{ secrets.SASP_SERVER_DIR }}
+          log-level: verbose
+          state-name: ".ftp-deploy-sync-state.json"
