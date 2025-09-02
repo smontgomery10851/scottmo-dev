@@ -1,4 +1,4 @@
-name: deploy-smarterasp
+name: deploy-smarterasp-msdeploy
 on:
   push:
     branches: [ "main" ]
@@ -15,7 +15,7 @@ jobs:
         with:
           dotnet-version: "8.0.x"
 
-      # Self-contained (no host runtime dependency)
+      # Build self-contained so we don't rely on host runtime
       - name: Publish (self-contained win-x64)
         run: dotnet publish src/ScottMo.Web/ScottMo.Web.csproj -c Release -o publish -r win-x64 --self-contained true /p:PublishReadyToRun=true
 
@@ -32,94 +32,47 @@ jobs:
           if (-not $ancm) { throw "aspNetCore element not found in web.config" }
           $envs = $ancm.environmentVariables
           if (-not $envs) { $envs = $x.CreateElement("environmentVariables"); $ancm.AppendChild($envs) | Out-Null }
-          foreach ($n in @($envs.environmentVariable)) {
-            if ($n.name -eq "Default__ConnectionString") { $envs.RemoveChild($n) | Out-Null }
-          }
+          foreach ($n in @($envs.environmentVariable)) { if ($n.name -eq "Default__ConnectionString") { $envs.RemoveChild($n) | Out-Null } }
           $e = $x.CreateElement("environmentVariable")
           $e.SetAttribute("name","Default__ConnectionString")
           $e.SetAttribute("value","${{ secrets.SASP_DB_CONNSTR }}")
           $envs.AppendChild($e) | Out-Null
+          # ensure globalization not invariant
+          foreach ($n in @($envs.environmentVariable)) { if ($n.name -eq "DOTNET_SYSTEM_GLOBALIZATION_INVARIANT") { $envs.RemoveChild($n) | Out-Null } }
+          $g = $x.CreateElement("environmentVariable")
+          $g.SetAttribute("name","DOTNET_SYSTEM_GLOBALIZATION_INVARIANT")
+          $g.SetAttribute("value","false")
+          $envs.AppendChild($g) | Out-Null
           $x.Save($web)
 
-      - name: Add deploy marker
+      - name: Add deploy marker to wwwroot
         shell: pwsh
         run: |
           $sha = "${{ github.sha }}".Substring(0,7)
           New-Item -ItemType Directory -Path "publish/wwwroot" -Force | Out-Null
           Set-Content -Path "publish/wwwroot/version.txt" -Value "deployed $((Get-Date).ToString('u')) / $sha"
 
-      # (Optional) prune some dev-only files to shrink upload
-      - name: Prune web libraries (dist only)
+      - name: Install Web Deploy (msdeploy)
+        shell: pwsh
+        run: choco install webdeploy -y
+
+      # MSDeploy the folder to your site
+      - name: MSDeploy sync
         shell: pwsh
         run: |
-          $paths = @(
-            "publish/wwwroot/lib/bootstrap/scss",
-            "publish/wwwroot/lib/bootstrap/js/src",
-            "publish/wwwroot/lib/bootstrap/js/dist/dom",
-            "publish/wwwroot/lib/bootstrap/js/dist/util",
-            "publish/wwwroot/lib/jquery/src",
-            "publish/wwwroot/Identity/lib/bootstrap/scss",
-            "publish/wwwroot/Identity/lib/bootstrap/js/src",
-            "publish/wwwroot/Identity/lib/jquery/src"
-          )
-          foreach ($p in $paths) { if (Test-Path $p) { Remove-Item -Recurse -Force $p } }
+          $url  = "${{ secrets.SASP_MSDEPLOY_URL }}"
+          $user = "${{ secrets.SASP_MSDEPLOY_USER }}"
+          $pwd  = "${{ secrets.SASP_MSDEPLOY_PWD }}"
 
-      # --- Phase 1: take site offline to release file locks ---
-      - name: Create app_offline stub
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Path "offline" -Force | Out-Null
-          $html = '<!doctype html><meta charset="utf-8"><title>Updating</title><style>body{font-family:system-ui;margin:4rem}</style><h1>ScottMo.dev is updating</h1><p>Back in a moment.</p>'
-          Set-Content -Path "offline/app_offline.htm" -Value $html -Encoding UTF8
+          $src = "contentPath=`"$(Resolve-Path publish)`""
+          # Target IIS app name must match the site name in the URL query (?site=...)
+          $dest = "contentPath=`"smontgomery-001-site1`",computerName=`"$url`",userName=`"$user`",password=`"$pwd`",authType=`"Basic`""
 
-      - name: Upload app_offline.htm (stop the app)
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.6
-        with:
-          server: ${{ secrets.SASP_FTPS_SERVER }}
-          username: ${{ secrets.SASP_FTPS_USER }}
-          password: ${{ secrets.SASP_FTPS_PASSWORD }}
-          protocol: ftps
-          port: 21
-          timeout: 300000
-          local-dir: offline/
-          server-dir: ${{ secrets.SASP_SERVER_DIR }}   # e.g. scottmo-dev/  (must end with /)
-          log-level: verbose
-          state-name: .ftp-deploy-sync-offline.json
-
-      - name: Wait for IIS to unload the app
-        shell: pwsh
-        run: Start-Sleep -Seconds 8
-
-      # --- Phase 2: deploy the site while it's offline ---
-      - name: FTP Deploy site
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.6
-        with:
-          server: ${{ secrets.SASP_FTPS_SERVER }}
-          username: ${{ secrets.SASP_FTPS_USER }}
-          password: ${{ secrets.SASP_FTPS_PASSWORD }}
-          protocol: ftps
-          port: 21
-          timeout: 300000
-          local-dir: publish/
-          server-dir: ${{ secrets.SASP_SERVER_DIR }}
-          log-level: verbose
-          state-name: .ftp-deploy-sync-state.json
-
-      # --- Phase 3: remove app_offline.htm and clean extras (preserve Downloads if present) ---
-      - name: Bring site back online (remove app_offline.htm)
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.6
-        with:
-          server: ${{ secrets.SASP_FTPS_SERVER }}
-          username: ${{ secrets.SASP_FTPS_USER }}
-          password: ${{ secrets.SASP_FTPS_PASSWORD }}
-          protocol: ftps
-          port: 21
-          timeout: 300000
-          local-dir: publish/
-          server-dir: scottmo-dev/
-          dangerous-clean-slate: true
-          exclude: |
-            Downloads/**
-            **/Downloads/**
-          log-level: verbose
-          state-name: .ftp-deploy-sync-clean.json
+          & "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe" `
+            -verb:sync `
+            -source:$src `
+            -dest:$dest `
+            -enableRule:AppOffline `
+            -enableRule:DoNotDeleteRule `
+            -allowUntrusted `
+            -retryAttempts:3 -retryInterval:5000
