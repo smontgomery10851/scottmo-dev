@@ -45,7 +45,8 @@ jobs:
         shell: pwsh
         run: |
           $sha = "${{ github.sha }}".Substring(0,7)
-          Set-Content -Path "publish/version.txt" -Value "deployed $((Get-Date).ToString('u')) / $sha"
+          New-Item -ItemType Directory -Path "publish/wwwroot" -Force | Out-Null
+          Set-Content -Path "publish/wwwroot/version.txt" -Value "deployed $((Get-Date).ToString('u')) / $sha"
 
       # (Optional) prune some dev-only files to shrink upload
       - name: Prune web libraries (dist only)
