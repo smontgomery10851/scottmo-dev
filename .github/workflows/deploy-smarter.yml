@@ -62,4 +62,45 @@ jobs:
           password: ${{ secrets.SASP_FTPS_PASSWORD }}
           protocol: ftps
           port: 21
-          local-dir: "offli
+          local-dir: "offline/"
+          server-dir: ${{ secrets.SASP_SERVER_DIR }}   # MUST end with a trailing slash
+          log-level: verbose
+          state-name: ".ftp-deploy-sync-offline.json"
+
+      - name: Wait for IIS to unload the app
+        shell: pwsh
+        run: Start-Sleep -Seconds 5
+
+      # --- Phase 2: deploy the site while it's offline ---
+      - name: FTP Deploy site
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.6
+        with:
+          server: ${{ secrets.SASP_FTPS_SERVER }}
+          username: ${{ secrets.SASP_FTPS_USER }}
+          password: ${{ secrets.SASP_FTPS_PASSWORD }}
+          protocol: ftps
+          port: 21
+          local-dir: "publish/"
+          server-dir: ${{ secrets.SASP_SERVER_DIR }}
+          log-level: verbose
+          state-name: ".ftp-deploy-sync-state.json"
+
+      # --- Phase 3: remove app_offline.htm and clean extras (keeps Downloads if you add it here) ---
+      - name: Bring site back online (remove app_offline.htm)
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.6
+        with:
+          server: ${{ secrets.SASP_FTPS_SERVER }}
+          username: ${{ secrets.SASP_FTPS_USER }}
+          password: ${{ secrets.SASP_FTPS_PASSWORD }}
+          protocol: ftps
+          port: 21
+          local-dir: "publish/"
+          server-dir: ${{ secrets.SASP_SERVER_DIR }}
+          # Clean-slate removes files not in 'publish/' (like app_offline.htm).
+          # Add excludes to protect folders you keep on server (e.g., Downloads).
+          dangerous-clean-slate: true
+          exclude: |
+            Downloads/**
+            **/Downloads/**
+          log-level: verbose
+          state-name: ".ftp-deploy-sync-clean.json"
