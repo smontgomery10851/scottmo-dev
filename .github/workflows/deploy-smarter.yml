@@ -1,7 +1,11 @@
 name: deploy-smarterasp-msdeploy
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
+
+permissions:
+  contents: read
 
 jobs:
   build-and-deploy:
@@ -13,9 +17,8 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "8.0.x"
+          dotnet-version: 8.0.x
 
-      # Build self-contained so we don't rely on host runtime
       - name: Publish (self-contained win-x64)
         run: dotnet publish src/ScottMo.Web/ScottMo.Web.csproj -c Release -o publish -r win-x64 --self-contained true /p:PublishReadyToRun=true
 
@@ -23,34 +26,21 @@ jobs:
         shell: pwsh
         run: New-Item -ItemType Directory -Path "publish/logs" -Force | Out-Null
 
-    - name: Inject connection string into web.config
-      shell: pwsh
-      run: |
-        $web = "publish/web.config"
-        [xml]$x = Get-Content $web
-        $ancm = $x.configuration.'system.webServer'.aspNetCore
-        if (-not $ancm) { throw "aspNetCore element not found in web.config" }
-        $envs = $ancm.environmentVariables
-        if (-not $envs) { $envs = $x.CreateElement("environmentVariables"); $ancm.AppendChild($envs) | Out-Null }
-
-        # Remove any previous entries
-        foreach ($n in @($envs.environmentVariable)) {
-          if ($n.name -in @("ConnectionStrings__Default","DOTNET_SYSTEM_GLOBALIZATION_INVARIANT")) { $envs.RemoveChild($n) | Out-Null }
-        }
-
-        # Correct connection-string env var
-        $e = $x.CreateElement("environmentVariable")
-        $e.SetAttribute("name","ConnectionStrings__Default")
-        $e.SetAttribute("value","${{ secrets.SASP_DB_CONNSTR }}")
-        $envs.AppendChild($e) | Out-Null
-
-        # Ensure globalization is not invariant
-        $g = $x.CreateElement("environmentVariable")
-        $g.SetAttribute("name","DOTNET_SYSTEM_GLOBALIZATION_INVARIANT")
-        $g.SetAttribute("value","false")
-        $envs.AppendChild($g) | Out-Null
-
-        $x.Save($web)
+      - name: Inject env vars into web.config
+        shell: pwsh
+        run: |
+          $web = "publish/web.config"
+          [xml]$x = Get-Content $web
+          $ancm = $x.configuration.'system.webServer'.aspNetCore
+          if (-not $ancm){throw "aspNetCore element not found in web.config"}
+          $envs = $ancm.environmentVariables
+          if (-not $envs){$envs = $x.CreateElement("environmentVariables"); $ancm.AppendChild($envs) | Out-Null}
+          foreach($n in @($envs.environmentVariable)){
+            if($n.name -in @("ConnectionStrings__Default","DOTNET_SYSTEM_GLOBALIZATION_INVARIANT")){$envs.RemoveChild($n)|Out-Null}
+          }
+          $add = $x.CreateElement("environmentVariable"); $add.SetAttribute("name","ConnectionStrings__Default"); $add.SetAttribute("value","${{ secrets.SASP_DB_CONNSTR }}"); $envs.AppendChild($add)|Out-Null
+          $glob = $x.CreateElement("environmentVariable"); $glob.SetAttribute("name","DOTNET_SYSTEM_GLOBALIZATION_INVARIANT"); $glob.SetAttribute("value","false"); $envs.AppendChild($glob)|Out-Null
+          $x.Save($web)
 
       - name: Add deploy marker to wwwroot
         shell: pwsh
@@ -59,31 +49,24 @@ jobs:
           New-Item -ItemType Directory -Path "publish/wwwroot" -Force | Out-Null
           Set-Content -Path "publish/wwwroot/version.txt" -Value "deployed $((Get-Date).ToString('u')) / $sha"
 
-      - name: Install Web Deploy (msdeploy)
+      - name: Install Web Deploy
         shell: pwsh
-        run: choco install webdeploy -y
+        run: choco install webdeploy -y --no-progress
 
-      # MSDeploy the folder to your site
       - name: MSDeploy sync
         shell: pwsh
         run: |
           $url  = "${{ secrets.SASP_MSDEPLOY_URL }}"
           $user = "${{ secrets.SASP_MSDEPLOY_USER }}"
           $pwd  = "${{ secrets.SASP_MSDEPLOY_PWD }}"
-
           $msdeploy = "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe"
           $srcPath  = (Resolve-Path "publish").Path
-
-          # No embedded quotes; each is a separate arg
-          $srcArg  = "-source:contentPath=$srcPath"
-          $destArg = "-dest:contentPath=smontgomery-001-site1,computerName=$url,userName=$user,password=$pwd,authType=Basic"
-
           & $msdeploy `
-            -verb:sync `
-            $srcArg `
-            $destArg `
-            -enableRule:AppOffline `
-            -enableRule:DoNotDeleteRule `
-            -allowUntrusted `
-            -retryAttempts:3 `
-            -retryInterval:5000
+            "-verb:sync" `
+            "-source:contentPath=$srcPath" `
+            "-dest:contentPath=smontgomery-001-site1,computerName=$url,userName=$user,password=$pwd,authType=Basic" `
+            "-enableRule:AppOffline" `
+            "-enableRule:DoNotDeleteRule" `
+            "-allowUntrusted" `
+            "-retryAttempts:3" `
+            "-retryInterval:5000"
