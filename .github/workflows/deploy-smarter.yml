@@ -64,15 +64,18 @@ jobs:
           $user = "${{ secrets.SASP_MSDEPLOY_USER }}"
           $pwd  = "${{ secrets.SASP_MSDEPLOY_PWD }}"
 
-          $src = "contentPath=`"$(Resolve-Path publish)`""
-          # Target IIS app name must match the site name in the URL query (?site=...)
-          $dest = "contentPath=`"smontgomery-001-site1`",computerName=`"$url`",userName=`"$user`",password=`"$pwd`",authType=`"Basic`""
+          $msdeploy = "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe"
+          $srcPath = (Resolve-Path "publish").Path
 
-          & "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe" `
+          $srcArg  = "-source:contentPath=""$srcPath"""
+          $destArg = "-dest:contentPath=""smontgomery-001-site1"",computerName=""$url"",userName=""$user"",password=""$pwd"",authType=Basic"
+
+          & $msdeploy `
             -verb:sync `
-            -source:$src `
-            -dest:$dest `
+            $srcArg `
+            $destArg `
             -enableRule:AppOffline `
             -enableRule:DoNotDeleteRule `
             -allowUntrusted `
-            -retryAttempts:3 -retryInterval:5000
+            -retryAttempts:3 `
+            -retryInterval:5000
