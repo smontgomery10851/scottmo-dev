@@ -12,7 +12,7 @@ jobs:
         with:
           dotnet-version: "8.0.x"
 
-      # Self-contained publish (no host runtime required)
+      # Self-contained (no host runtime dependency)
       - name: Publish (self-contained win-x64)
         run: dotnet publish src/ScottMo.Web/ScottMo.Web.csproj -c Release -o publish -r win-x64 --self-contained true /p:PublishReadyToRun=true
 
@@ -42,15 +42,24 @@ jobs:
           $sha = "${{ github.sha }}".Substring(0,7)
           Set-Content -Path "publish/version.txt" -Value "deployed $((Get-Date).ToString('u')) / $sha"
 
-      - name: FTP Deploy to SmarterASP
+      # --- Phase 1: take site offline to release file locks ---
+      - name: Create app_offline stub
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory offline -Force | Out-Null
+          @"
+<!doctype html><meta charset="utf-8">
+<title>Updating…</title>
+<style>body{font-family:system-ui;margin:4rem}</style>
+<h1>ScottMo.dev is updating</h1><p>Back in a moment.</p>
+"@ | Set-Content offline/app_offline.htm -Encoding UTF8
+
+      - name: Upload app_offline.htm (stop the app)
         uses: SamKirkland/FTP-Deploy-Action@v4.3.6
         with:
-          server: ${{ secrets.SASP_FTPS_SERVER }}      # e.g. win8139.site4now.net
-          username: ${{ secrets.SASP_FTPS_USER }}       # smontgomery-001
+          server: ${{ secrets.SASP_FTPS_SERVER }}
+          username: ${{ secrets.SASP_FTPS_USER }}
           password: ${{ secrets.SASP_FTPS_PASSWORD }}
-          protocol: ftps                               # if data socket drops, switch to ftps-legacy + port 990
+          protocol: ftps
           port: 21
-          local-dir: "publish/"
-          server-dir: ${{ secrets.SASP_SERVER_DIR }}   # e.g. scottmo-dev/ or wwwroot/
-          log-level: verbose
-          state-name: ".ftp-deploy-sync-state.json"
+          local-dir: "offli
