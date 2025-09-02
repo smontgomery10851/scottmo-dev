@@ -35,11 +35,31 @@ jobs:
           if (-not $ancm){throw "aspNetCore element not found in web.config"}
           $envs = $ancm.environmentVariables
           if (-not $envs){$envs = $x.CreateElement("environmentVariables"); $ancm.AppendChild($envs) | Out-Null}
+
+          # Remove prior entries if present
           foreach($n in @($envs.environmentVariable)){
-            if($n.name -in @("ConnectionStrings__Default","DOTNET_SYSTEM_GLOBALIZATION_INVARIANT")){$envs.RemoveChild($n)|Out-Null}
+            if($n.name -in @("ConnectionStrings__Default","DOTNET_SYSTEM_GLOBALIZATION_INVARIANT")){
+              $envs.RemoveChild($n) | Out-Null
+            }
           }
-          $add = $x.CreateElement("environmentVariable"); $add.SetAttribute("name","ConnectionStrings__Default"); $add.SetAttribute("value","${{ secrets.SASP_DB_CONNSTR }}"); $envs.AppendChild($add)|Out-Null
-          $glob = $x.CreateElement("environmentVariable"); $glob.SetAttribute("name","DOTNET_SYSTEM_GLOBALIZATION_INVARIANT"); $glob.SetAttribute("value","false"); $envs.AppendChild($glob)|Out-Null
+
+          # Correct connection string key for ASP.NET Core
+          $add = $x.CreateElement("environmentVariable")
+          $add.SetAttribute("name","ConnectionStrings__Default")
+          $add.SetAttribute("value","${{ secrets.SASP_DB_CONNSTR }}")
+          $envs.AppendChild($add) | Out-Null
+
+          # Force non-invariant globalization (set both forms; last wins)
+          $g1 = $x.CreateElement("environmentVariable")
+          $g1.SetAttribute("name","DOTNET_SYSTEM_GLOBALIZATION_INVARIANT")
+          $g1.SetAttribute("value","false")
+          $envs.AppendChild($g1) | Out-Null
+
+          $g2 = $x.CreateElement("environmentVariable")
+          $g2.SetAttribute("name","DOTNET_SYSTEM_GLOBALIZATION_INVARIANT")
+          $g2.SetAttribute("value","0")
+          $envs.AppendChild($g2) | Out-Null
+
           $x.Save($web)
 
       - name: Add deploy marker to wwwroot
