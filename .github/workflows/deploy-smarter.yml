@@ -65,10 +65,11 @@ jobs:
           $pwd  = "${{ secrets.SASP_MSDEPLOY_PWD }}"
 
           $msdeploy = "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe"
-          $srcPath = (Resolve-Path "publish").Path
+          $srcPath  = (Resolve-Path "publish").Path
 
-          $srcArg  = "-source:contentPath=""$srcPath"""
-          $destArg = "-dest:contentPath=""smontgomery-001-site1"",computerName=""$url"",userName=""$user"",password=""$pwd"",authType=Basic"
+          # No embedded quotes; each is a separate arg
+          $srcArg  = "-source:contentPath=$srcPath"
+          $destArg = "-dest:contentPath=smontgomery-001-site1,computerName=$url,userName=$user,password=$pwd,authType=Basic"
 
           & $msdeploy `
             -verb:sync `
