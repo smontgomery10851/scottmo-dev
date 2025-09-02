@@ -50,12 +50,8 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path "offline" -Force | Out-Null
-          @'
-<!doctype html><meta charset="utf-8">
-<title>Updating…</title>
-<style>body{font-family:system-ui;margin:4rem}</style>
-<h1>ScottMo.dev is updating</h1><p>Back in a moment.</p>
-'@ | Set-Content -Path "offline/app_offline.htm" -Encoding UTF8
+          $html = '<!doctype html><meta charset="utf-8"><title>Updating</title><style>body{font-family:system-ui;margin:4rem}</style><h1>ScottMo.dev is updating</h1><p>Back in a moment.</p>'
+          Set-Content -Path "offline/app_offline.htm" -Value $html -Encoding UTF8
 
       - name: Upload app_offline.htm (stop the app)
         uses: SamKirkland/FTP-Deploy-Action@v4.3.6
