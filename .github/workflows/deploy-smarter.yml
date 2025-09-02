@@ -7,24 +7,19 @@ jobs:
   build-and-deploy:
     runs-on: windows-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
 
-      # Framework-dependent publish (smaller; uses host's .NET 8)
-      - name: Publish
-        run: dotnet publish src/ScottMo.Web/ScottMo.Web.csproj -c Release -o publish
+      # Self-contained publish (no host runtime required)
+      - name: Publish (self-contained win-x64)
+        run: dotnet publish src/ScottMo.Web/ScottMo.Web.csproj -c Release -o publish -r win-x64 --self-contained true /p:PublishReadyToRun=true
 
-      # Ensure stdout log folder exists (ANCM won't create the folder)
-      - name: Create stdout log folder in artifact
+      - name: Ensure stdout log folder exists
         shell: pwsh
         run: New-Item -ItemType Directory -Path "publish/logs" -Force | Out-Null
 
-      # Inject DB connection string into web.config (keeps secrets out of git)
       - name: Inject connection string into web.config
         shell: pwsh
         run: |
@@ -50,12 +45,12 @@ jobs:
       - name: FTP Deploy to SmarterASP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.6
         with:
-          server: ${{ secrets.SASP_FTPS_SERVER }}
-          username: ${{ secrets.SASP_FTPS_USER }}
+          server: ${{ secrets.SASP_FTPS_SERVER }}      # e.g. win8139.site4now.net
+          username: ${{ secrets.SASP_FTPS_USER }}       # smontgomery-001
           password: ${{ secrets.SASP_FTPS_PASSWORD }}
-          protocol: ftps           # explicit FTPS on 21; if issues, change to ftps-legacy + port 990
+          protocol: ftps                               # if data socket drops, switch to ftps-legacy + port 990
           port: 21
           local-dir: "publish/"
-          server-dir: ${{ secrets.SASP_SERVER_DIR }}
+          server-dir: ${{ secrets.SASP_SERVER_DIR }}   # e.g. scottmo-dev/ or wwwroot/
           log-level: verbose
           state-name: ".ftp-deploy-sync-state.json"

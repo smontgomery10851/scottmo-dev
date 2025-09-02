@@ -7,7 +7,6 @@
     <UserSecretsId>scottmo.dev-ScottMo.Web</UserSecretsId>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
-    <RuntimeIdentifier>win-x86</RuntimeIdentifier>
   </PropertyGroup>
 
   <ItemGroup>
