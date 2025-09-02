@@ -87,3 +87,8 @@ Properties/PublishProfiles/*
 # Keep Bootstrap/jQuery (committed). Ignore DotLottie since you use the CDN.
 ###############################################################################
 **/wwwroot/lib/dotlottie-player/
+
+###############################################################################
+# Data Protection Keys
+###############################################################################
+src/ScottMo.Web/keys/

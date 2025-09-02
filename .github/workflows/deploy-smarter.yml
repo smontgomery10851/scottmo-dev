@@ -23,27 +23,34 @@ jobs:
         shell: pwsh
         run: New-Item -ItemType Directory -Path "publish/logs" -Force | Out-Null
 
-      - name: Inject connection string into web.config
-        shell: pwsh
-        run: |
-          $web = "publish/web.config"
-          [xml]$x = Get-Content $web
-          $ancm = $x.configuration.'system.webServer'.aspNetCore
-          if (-not $ancm) { throw "aspNetCore element not found in web.config" }
-          $envs = $ancm.environmentVariables
-          if (-not $envs) { $envs = $x.CreateElement("environmentVariables"); $ancm.AppendChild($envs) | Out-Null }
-          foreach ($n in @($envs.environmentVariable)) { if ($n.name -eq "Default__ConnectionString") { $envs.RemoveChild($n) | Out-Null } }
-          $e = $x.CreateElement("environmentVariable")
-          $e.SetAttribute("name","Default__ConnectionString")
-          $e.SetAttribute("value","${{ secrets.SASP_DB_CONNSTR }}")
-          $envs.AppendChild($e) | Out-Null
-          # ensure globalization not invariant
-          foreach ($n in @($envs.environmentVariable)) { if ($n.name -eq "DOTNET_SYSTEM_GLOBALIZATION_INVARIANT") { $envs.RemoveChild($n) | Out-Null } }
-          $g = $x.CreateElement("environmentVariable")
-          $g.SetAttribute("name","DOTNET_SYSTEM_GLOBALIZATION_INVARIANT")
-          $g.SetAttribute("value","false")
-          $envs.AppendChild($g) | Out-Null
-          $x.Save($web)
+    - name: Inject connection string into web.config
+      shell: pwsh
+      run: |
+        $web = "publish/web.config"
+        [xml]$x = Get-Content $web
+        $ancm = $x.configuration.'system.webServer'.aspNetCore
+        if (-not $ancm) { throw "aspNetCore element not found in web.config" }
+        $envs = $ancm.environmentVariables
+        if (-not $envs) { $envs = $x.CreateElement("environmentVariables"); $ancm.AppendChild($envs) | Out-Null }
+
+        # Remove any previous entries
+        foreach ($n in @($envs.environmentVariable)) {
+          if ($n.name -in @("ConnectionStrings__Default","DOTNET_SYSTEM_GLOBALIZATION_INVARIANT")) { $envs.RemoveChild($n) | Out-Null }
+        }
+
+        # Correct connection-string env var
+        $e = $x.CreateElement("environmentVariable")
+        $e.SetAttribute("name","ConnectionStrings__Default")
+        $e.SetAttribute("value","${{ secrets.SASP_DB_CONNSTR }}")
+        $envs.AppendChild($e) | Out-Null
+
+        # Ensure globalization is not invariant
+        $g = $x.CreateElement("environmentVariable")
+        $g.SetAttribute("name","DOTNET_SYSTEM_GLOBALIZATION_INVARIANT")
+        $g.SetAttribute("value","false")
+        $envs.AppendChild($g) | Out-Null
+
+        $x.Save($web)
 
       - name: Add deploy marker to wwwroot
         shell: pwsh
