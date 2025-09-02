@@ -1,60 +1,69 @@
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using ScottMo.Web.Data;
-using Microsoft.AspNetCore.DataProtection;
 using System.IO;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ---------- DataProtection: persist keys (prevents antiforgery failures after restarts)
 var keysPath = Path.Combine(builder.Environment.ContentRootPath, "keys");
 Directory.CreateDirectory(keysPath);
 builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo(keysPath))
     .SetApplicationName("ScottMo.Web");
 
-// Prefer environment variables (for secrets) over appsettings.json
-var connectionString = builder.Configuration.GetConnectionString("Default")
-    ?? Environment.GetEnvironmentVariable("Default__ConnectionString")
-    ?? throw new InvalidOperationException("Connection string 'Default' not found.");
+// ---------- Connection string: read from env var injected by GitHub Actions
+// Primary: ConnectionStrings__Default
+// Fallbacks: Default__ConnectionString or appsettings.json "ConnectionStrings:Default"
+var conn =
+    builder.Configuration.GetConnectionString("Default")
+    ?? builder.Configuration["ConnectionStrings__Default"]
+    ?? builder.Configuration["Default__ConnectionString"];
 
-// Services
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(connectionString));
-
-builder.Services.AddDefaultIdentity<IdentityUser>(options =>
+if (string.IsNullOrWhiteSpace(conn))
 {
-    options.SignIn.RequireConfirmedAccount = false;
-    options.Password.RequireDigit = true;
-    options.Password.RequireLowercase = true;
-    options.Password.RequireUppercase = false;
-    options.Password.RequireNonAlphanumeric = false;
-    options.Password.RequiredLength = 6;
-})
-.AddEntityFrameworkStores<ApplicationDbContext>()
-.AddDefaultTokenProviders()
-.AddDefaultUI();
+    throw new InvalidOperationException("No connection string found. Ensure the env var ConnectionStrings__Default is set.");
+}
+
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseSqlServer(conn));
+
+// ---------- Identity
+builder.Services
+    .AddDefaultIdentity<IdentityUser>(options =>
+    {
+        options.SignIn.RequireConfirmedAccount = false;
+        // optional: relax password for testing, adjust as needed
+        options.Password.RequiredLength = 6;
+        options.Password.RequireNonAlphanumeric = false;
+        options.Password.RequireUppercase = false;
+        options.Password.RequireDigit = false;
+    })
+    .AddEntityFrameworkStores<ApplicationDbContext>();
 
 builder.Services.AddRazorPages();
-builder.Services.AddControllers(); // Web API
 
 var app = builder.Build();
 
-// DO NOT auto-migrate to avoid changing existing schema on shared host.
-// If you add features later, run migrations locally and publish scripts manually.
-
+// ---------- Middleware pipeline
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+app.UseHttpsRedirection();          // fine even on temp HTTP URL; will no-op if no https port
 app.UseStaticFiles();
+
 app.UseRouting();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapRazorPages();
-app.MapControllers();
+
+// quick health ping
+app.MapGet("/api/hello", () => Results.Ok(new { ok = true, time = DateTime.UtcNow }));
 
 app.Run();
