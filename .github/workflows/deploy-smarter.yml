@@ -32,7 +32,9 @@ jobs:
           if (-not $ancm) { throw "aspNetCore element not found in web.config" }
           $envs = $ancm.environmentVariables
           if (-not $envs) { $envs = $x.CreateElement("environmentVariables"); $ancm.AppendChild($envs) | Out-Null }
-          foreach ($n in @($envs.environmentVariable)) { if ($n.name -eq "Default__ConnectionString") { $envs.RemoveChild($n) | Out-Null } }
+          foreach ($n in @($envs.environmentVariable)) {
+            if ($n.name -eq "Default__ConnectionString") { $envs.RemoveChild($n) | Out-Null }
+          }
           $e = $x.CreateElement("environmentVariable")
           $e.SetAttribute("name","Default__ConnectionString")
           $e.SetAttribute("value","${{ secrets.SASP_DB_CONNSTR }}")
@@ -45,7 +47,7 @@ jobs:
           $sha = "${{ github.sha }}".Substring(0,7)
           Set-Content -Path "publish/version.txt" -Value "deployed $((Get-Date).ToString('u')) / $sha"
 
-      # --- Prune dev-only files from web libraries to cut upload size ---
+      # (Optional) prune some dev-only files to shrink upload
       - name: Prune web libraries (dist only)
         shell: pwsh
         run: |
@@ -55,15 +57,9 @@ jobs:
             "publish/wwwroot/lib/bootstrap/js/dist/dom",
             "publish/wwwroot/lib/bootstrap/js/dist/util",
             "publish/wwwroot/lib/jquery/src",
-            "publish/wwwroot/lib/jquery/bower.json",
-            "publish/wwwroot/lib/jquery/README.md",
-            "publish/wwwroot/lib/jquery/LICENSE.txt",
-            "publish/wwwroot/lib/jquery/package.json",
-            "publish/wwwroot/lib/jquery-validation/dist/localization",
             "publish/wwwroot/Identity/lib/bootstrap/scss",
             "publish/wwwroot/Identity/lib/bootstrap/js/src",
-            "publish/wwwroot/Identity/lib/jquery/src",
-            "publish/wwwroot/Identity/lib/jquery-validation/dist/localization"
+            "publish/wwwroot/Identity/lib/jquery/src"
           )
           foreach ($p in $paths) { if (Test-Path $p) { Remove-Item -Recurse -Force $p } }
 
@@ -81,11 +77,11 @@ jobs:
           server: ${{ secrets.SASP_FTPS_SERVER }}
           username: ${{ secrets.SASP_FTPS_USER }}
           password: ${{ secrets.SASP_FTPS_PASSWORD }}
-          protocol: ftps-legacy
-          port: 990
+          protocol: ftps
+          port: 21
           timeout: 300000
           local-dir: offline/
-          server-dir: ${{ secrets.SASP_SERVER_DIR }}   # must end with /
+          server-dir: ${{ secrets.SASP_SERVER_DIR }}   # e.g. scottmo-dev/  (must end with /)
           log-level: verbose
           state-name: .ftp-deploy-sync-offline.json
 
@@ -100,8 +96,8 @@ jobs:
           server: ${{ secrets.SASP_FTPS_SERVER }}
           username: ${{ secrets.SASP_FTPS_USER }}
           password: ${{ secrets.SASP_FTPS_PASSWORD }}
-          protocol: ftps-legacy
-          port: 990
+          protocol: ftps
+          port: 21
           timeout: 300000
           local-dir: publish/
           server-dir: ${{ secrets.SASP_SERVER_DIR }}
@@ -115,11 +111,11 @@ jobs:
           server: ${{ secrets.SASP_FTPS_SERVER }}
           username: ${{ secrets.SASP_FTPS_USER }}
           password: ${{ secrets.SASP_FTPS_PASSWORD }}
-          protocol: ftps-legacy
-          port: 990
+          protocol: ftps
+          port: 21
           timeout: 300000
           local-dir: publish/
-          server-dir: ${{ secrets.SASP_SERVER_DIR }}
+          server-dir: scottmo-dev/
           dangerous-clean-slate: true
           exclude: |
             Downloads/**
